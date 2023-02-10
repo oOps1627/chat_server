@@ -7,24 +7,52 @@ import {
   WebSocketGateway,
   WebSocketServer
 } from "@nestjs/websockets";
-import { Injectable } from "@nestjs/common";
 import { parse } from "cookie";
+import { distinctUntilChanged, Subject } from "rxjs";
+import { AuthService } from "../auth/auth.service";
 
-@Injectable()
+export enum RealtimeEvent {
+  UserConnected = 'UserConnected',
+  UserDisconnected = 'UserDisconnected',
+}
+
+export enum ConnectionAction {
+  Connect,
+  Disconnect
+}
+
+export interface IConnectionEvent {
+  action: ConnectionAction;
+  userId: string;
+}
+
+
 @WebSocketGateway({
   cors: {
     origin: "*"
   }
 })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private _connection$ = new Subject<IConnectionEvent>();
+
+  connection$ = this._connection$.asObservable().pipe(
+    distinctUntilChanged((prev, curr) => prev.action === curr.action && prev.userId === curr.userId)
+  );
+
   @WebSocketServer()
   server: Server;
 
-  handleConnection(socket: Socket) {
-    this.updateAuthorization(socket);
+  constructor(private _authService: AuthService) {
   }
 
-  handleDisconnect(client: any): any {
+  handleConnection(socket: Socket): void {
+    const userId = this._getUserIdBySocket(socket);
+    this._connection$.next({userId, action: ConnectionAction.Connect});
+  }
+
+  handleDisconnect(socket: Socket): void {
+    const userId = this._getUserIdBySocket(socket);
+    this._connection$.next({userId, action: ConnectionAction.Disconnect});
   }
 
   @SubscribeMessage("delete group")
@@ -32,23 +60,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return data;
   }
 
-  public updateAuthorization(socket: Socket): void {
-    if (!socket) {
-      return;
-    }
-
-    const user = this._getUserFromCookies(socket.handshake.headers.cookie);
-    socket.emit("check-authorization", user);
-  }
-
-  private _getUserFromCookies(cookies: string) {
-    let user;
-
-    try {
-      user = JSON.parse(parse(cookies)?.user ?? "");
-    } catch (e) {
-    }
-
-    return { username: user?.username ?? "Гість", authorized: !!user };
+  private _getUserIdBySocket(socket: Socket): string {
+    return this._authService.getUserIdFromCookies(parse(socket.handshake.headers.cookie));
   }
 }

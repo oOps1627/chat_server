@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpStatus, Post, Res } from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { User } from "../users/user.schema";
 import { LoginDto } from "./dto/login.dto";
@@ -13,22 +13,23 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: "Login user" })
-  @ApiResponse({ status: 201, type: User })
+  @ApiResponse({ status: HttpStatus.CREATED, type: User })
   @Post("login")
-  login(@Body() body: LoginDto, @Res() res: Response) {
-    this._authService.authorize(res, body);
-    res.sendStatus(201);
+  @HttpCode(HttpStatus.CREATED)
+  async login(@Body() body: LoginDto, @Res() res: Response): Promise<void> {
+     const user: User = await this._authService.authorize(res, body);
+    res.status(HttpStatus.CREATED).send(user);
   }
 
   @Delete("logout")
   logout(@Res() res: Response) {
     this._authService.unAuthorize(res);
-    res.sendStatus(201);
+    res.sendStatus(HttpStatus.CREATED);
   }
 
   @Post("register")
-  register(@Res() res: Response, @Body() body: RegisterDto) {
-    this._authService.register(body);
+  async register(@Res() res: Response, @Body() body: RegisterDto) {
+    await this._authService.register(body);
     return res.status(HttpStatus.CREATED).json({
       message: "User has been registered successfully"
     });
