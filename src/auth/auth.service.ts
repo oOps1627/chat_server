@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { Request, Response } from "express";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -7,8 +7,8 @@ import { UsersService } from "../users/users.service";
 import { User } from "../users/user.schema";
 
 interface IDecodedToken {
-  userId: string;
-  expiresIn: number;
+    userId: string;
+    expiresIn: number;
 }
 
 const TOKEN_KEY = 'access_token';
@@ -18,83 +18,82 @@ const TOKEN_SECRET = 'Fuck russia';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private _jwtService: JwtService,
-    private _usersService: UsersService
-  ) {
-  }
-
-  isAuthorized(req: Request): boolean {
-    const token = this._getTokenFromCookies(req.cookies);
-
-    return token && !this._isTokenExpired(token);
-  }
-
-  getUserIdFromCookies(cookies: object): string | undefined {
-    const token = this._getTokenFromCookies(cookies);
-
-    return token && this._parseToken(token)?.userId;
-  }
-
-  async authorize(response: Response, loginDto: LoginDto): Promise<User> {
-    const user: User = await this._usersService.getUserByUsername(loginDto.username);
-    if (!user) {
-    //  throw new HttpException(response, HttpStatus.NOT_FOUND, { description: "User with this username not exist" });
-      return;
-    }
-    //
-    //
-    // if (!this._isPasswordsMatch(loginDto, user)) {
-    //   throw new HttpException(response, HttpStatus.UNAUTHORIZED, { description: "Password is incorrect" });
-    // }
-
-    const token = this._generateToken(user);
-
-    this._setTokenToCookies(response, token);
-
-    return user;
-  }
-
-  unAuthorize(response: Response): void {
-    this._setTokenToCookies(response, null);
-  }
-
-  async register(body: RegisterDto): Promise<User> {
-    const user: User = await this._usersService.createUser(body);
-
-    return user;
-  }
-
-  private _setTokenToCookies(res: Response, token: string): void {
-    if (!token) {
-      res.cookie(TOKEN_KEY, '');
-      return;
-    }
-    res.cookie(TOKEN_KEY, `${TOKEN_TYPE} ${token}`);
-  }
-
-  private _getTokenFromCookies(cookies: object): string | undefined {
-    const [tokenType, token] = (cookies[TOKEN_KEY] ?? '').split(' ');
-    if (!token || tokenType !== TOKEN_TYPE) {
-      return;
+    constructor(
+        private _jwtService: JwtService,
+        private _usersService: UsersService
+    ) {
     }
 
-    return token;
-  }
+    isAuthorized(req: Request): boolean {
+        const token = this._getTokenFromCookies(req.cookies);
 
-  private _isTokenExpired(token: string): boolean {
-    return false; // TODO: check expiration;
-  }
+        return token && !this._isTokenExpired(token);
+    }
 
-  private _generateToken(user: User): string {
-    return this._jwtService.sign({ userId: user.id }, {secret: TOKEN_SECRET, expiresIn: TOKEN_EXPIRATION});
-  }
+    getUserIdFromCookies(cookies: object): string | undefined {
+        const token = this._getTokenFromCookies(cookies);
 
-  private _parseToken(token: string): IDecodedToken {
-    return this._jwtService.decode(token) as IDecodedToken;
-  }
+        return token && this._parseToken(token)?.userId;
+    }
 
-  private _isPasswordsMatch(loginDto: LoginDto, user: User): boolean {
-    return loginDto.password === user.password;
-  }
+    async authorize(response: Response, loginDto: LoginDto): Promise<User> {
+        const user: User = await this._usersService.getUserByUsername(loginDto.username);
+        if (!user) {
+            throw new HttpException('User with this username not exist', HttpStatus.NOT_FOUND)
+        }
+
+
+        // if (!this._isPasswordsMatch(loginDto, user)) {
+        //     throw new HttpException("Password is incorrect", HttpStatus.UNAUTHORIZED);
+        // }
+
+        const token = this._generateToken(user);
+
+        this._setTokenToCookies(response, token);
+
+        return user;
+    }
+
+    unAuthorize(response: Response): void {
+        this._setTokenToCookies(response, null);
+    }
+
+    async register(body: RegisterDto): Promise<User> {
+        const user: User = await this._usersService.createUser(body);
+
+        return user;
+    }
+
+    private _setTokenToCookies(res: Response, token: string): void {
+        if (!token) {
+            res.cookie(TOKEN_KEY, '');
+            return;
+        }
+        res.cookie(TOKEN_KEY, `${TOKEN_TYPE} ${token}`);
+    }
+
+    private _getTokenFromCookies(cookies: object): string | undefined {
+        const [tokenType, token] = (cookies[TOKEN_KEY] ?? '').split(' ');
+        if (!token || tokenType !== TOKEN_TYPE) {
+            return;
+        }
+
+        return token;
+    }
+
+    private _isTokenExpired(token: string): boolean {
+        return false; // TODO: check expiration;
+    }
+
+    private _generateToken(user: User): string {
+        return this._jwtService.sign({userId: user.id}, {secret: TOKEN_SECRET, expiresIn: TOKEN_EXPIRATION});
+    }
+
+    private _parseToken(token: string): IDecodedToken {
+        return this._jwtService.decode(token) as IDecodedToken;
+    }
+
+    private _isPasswordsMatch(loginDto: LoginDto, user: User): boolean {
+        return loginDto.password === user.password;
+    }
 }
