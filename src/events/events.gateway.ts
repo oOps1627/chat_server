@@ -7,60 +7,54 @@ import {
   WebSocketGateway,
   WebSocketServer
 } from "@nestjs/websockets";
-import { parse } from "cookie";
-import { distinctUntilChanged, Subject } from "rxjs";
-import { AuthService } from "../auth/auth.service";
-
-export enum RealtimeEvent {
-  UserConnected = 'UserConnected',
-  UserDisconnected = 'UserDisconnected',
-}
-
-export enum ConnectionAction {
-  Connect,
-  Disconnect
-}
-
-export interface IConnectionEvent {
-  action: ConnectionAction;
-  userId: string;
-}
-
+import { Injectable } from "@nestjs/common";
+import { Subject } from "rxjs";
+import { ConnectionAction, IConnectionEvent, RealtimeEvent } from "./types";
+import { IdentifierService } from "../identifier/identifier.service";
 
 @WebSocketGateway({
   cors: {
     origin: "*"
   }
 })
+@Injectable()
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  private _server: Server;
+
   private _connection$ = new Subject<IConnectionEvent>();
 
-  connection$ = this._connection$.asObservable().pipe(
-    distinctUntilChanged((prev, curr) => prev.action === curr.action && prev.userId === curr.userId)
-  );
+  connection$ = this._connection$.asObservable();
 
-  @WebSocketServer()
-  server: Server;
-
-  constructor(private _authService: AuthService) {
+  constructor(private _identifierService: IdentifierService) {
   }
 
   handleConnection(socket: Socket): void {
-    const userId = this._getUserIdBySocket(socket);
-    this._connection$.next({userId, action: ConnectionAction.Connect});
+    this._connection$.next({socket, action: ConnectionAction.Connect});
   }
 
   handleDisconnect(socket: Socket): void {
-    const userId = this._getUserIdBySocket(socket);
-    this._connection$.next({userId, action: ConnectionAction.Disconnect});
+    this._connection$.next({socket, action: ConnectionAction.Disconnect});
   }
 
-  @SubscribeMessage("delete group")
-  createGroup(@MessageBody() data: string): any {
-    return data;
+  emitEventToAll<T>(event: RealtimeEvent, data: T): void {
+    this._server.sockets.emit(event, data);
   }
 
-  private _getUserIdBySocket(socket: Socket): string {
-    return this._authService.getUserIdFromCookies(parse(socket.handshake.headers.cookie));
+  getSocket(userId: string): Socket {
+    let socket: Socket;
+    this._server.sockets.sockets.forEach(iteratedSocket => {
+      const socketUserId = this._identifierService.identify(iteratedSocket.handshake.headers);
+      if (socketUserId === userId) {
+        socket = iteratedSocket;
+      }
+    })
+
+    return socket;
   }
+
+  // @SubscribeMessage("delete group")
+  // private _createGroup(@MessageBody() data: string): any {
+  //   return data;
+  // }
 }

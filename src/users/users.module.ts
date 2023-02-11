@@ -5,11 +5,13 @@ import { UserSchema } from "./user.schema";
 import { UsersService } from "./users.service";
 import { EventsModule } from "../events/events.module";
 import { AuthModule } from "../auth/auth.module";
+import { IdentifierModule } from "../identifier/identifier.module";
 
 @Module({
   imports: [
-    forwardRef(() => AuthModule),
-    forwardRef(() => EventsModule),
+    AuthModule,
+    IdentifierModule,
+    EventsModule,
     MongooseModule.forFeature([{name: 'User', schema: UserSchema}]),
   ],
   controllers: [UsersController],

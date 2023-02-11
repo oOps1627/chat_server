@@ -4,11 +4,13 @@ import { User } from "./user.schema";
 import { AuthService } from "../auth/auth.service";
 import { Request } from "express";
 import { UsersService } from "./users.service";
+import { IdentifierService } from "../identifier/identifier.service";
 
 @ApiTags("Users")
 @Controller("users")
 export class UsersController {
   constructor(private _authService: AuthService,
+              private _identifierService: IdentifierService,
               private _usersService: UsersService) {
   }
 
@@ -18,7 +20,7 @@ export class UsersController {
       throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
     }
 
-    let userId = this._authService.getUserIdFromCookies(req.cookies);
+    let userId = this._identifierService.identify(req.headers);
     let user: User;
 
     if (!userId) {
@@ -35,6 +37,6 @@ export class UsersController {
 
   @Get('online')
   getOnlineUsers(): User[] {
-    return [{username: 'sdadas', id: 'asdasd',} as User]
+    return this._usersService.getOnlineUsers();
   }
 }

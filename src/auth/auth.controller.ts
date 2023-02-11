@@ -23,7 +23,7 @@ export class AuthController {
 
     @Delete("logout")
     logout(@Res() res: Response) {
-        this._authService.unAuthorize(res);
+        this._authService.logout(res);
         res.sendStatus(HttpStatus.CREATED);
     }
 

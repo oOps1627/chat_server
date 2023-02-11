@@ -5,6 +5,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { UsersModule } from "./users/users.module";
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from "./events/events.module";
+import { IdentifierModule } from './identifier/identifier.module';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { EventsModule } from "./events/events.module";
     MongooseModule.forRoot('mongodb://localhost:27017', {dbName: 'quickchat-database'}),
     UsersModule,
     AuthModule,
-    EventsModule
+    EventsModule,
+    IdentifierModule
   ],
 })
 export class AppModule {}
