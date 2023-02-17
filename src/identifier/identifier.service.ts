@@ -7,6 +7,7 @@ import { parse } from "cookie";
 
 interface IDecodedToken {
   userId: string;
+  username: string;
 }
 
 const TOKEN_KEY = "access_token";
@@ -21,10 +22,10 @@ export class IdentifierService {
   ) {
   }
 
-  identify(headers: IncomingHttpHeaders): string | undefined {
+  identify(headers: IncomingHttpHeaders): IDecodedToken | undefined {
     const token = this.getToken(headers);
 
-    return this._parseToken(token)?.userId;
+    return this._parseToken(token);
   }
 
   mark(response: Response, user: User): void {
@@ -38,7 +39,13 @@ export class IdentifierService {
   }
 
   getToken(headers: IncomingHttpHeaders): string | undefined {
-    const cookies = parse(headers.cookie);
+    let cookies;
+    try {
+      cookies = parse(headers.cookie);
+    } catch (error) {
+      console.error(error);
+      return;
+    }
 
     const [tokenType, token] = (cookies[TOKEN_KEY] ?? "").split(" ");
     if (!token || tokenType !== TOKEN_TYPE) {
@@ -58,7 +65,10 @@ export class IdentifierService {
 
 
   private _generateToken(user: User): string {
-    return this._jwtService.sign({ userId: user.id }, { secret: TOKEN_SECRET, expiresIn: TOKEN_EXPIRATION });
+    return this._jwtService.sign({
+      userId: user.id,
+      username: user.username
+    } as IDecodedToken, { secret: TOKEN_SECRET, expiresIn: TOKEN_EXPIRATION });
   }
 
   private _parseToken(token: string): IDecodedToken {

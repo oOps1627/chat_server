@@ -12,6 +12,7 @@ export class User {
   username: string;
 
   @ApiProperty({type: 'string'})
+  @Prop({required: true})
   password: string;
 
   @ApiProperty({type: 'number', isArray: true})

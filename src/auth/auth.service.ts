@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Request, Response } from "express";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -7,6 +7,7 @@ import { User } from "../users/user.schema";
 import { IdentifierService } from "../identifier/identifier.service";
 import { EventsGateway } from "../events/events.gateway";
 import { Socket } from "socket.io";
+import { PasswordHasher } from "./password-hasher";
 
 @Injectable()
 export class AuthService {
@@ -25,11 +26,11 @@ export class AuthService {
     const user: User = await this._usersService.getUserByUsername(loginDto.username);
 
     if (!user) {
-      throw new HttpException("User with this username not exist", HttpStatus.NOT_FOUND);
+      throw new NotFoundException("User with this username not exist");
     }
 
-    if (!this._isPasswordsMatch(loginDto, user)) {
-      throw new HttpException("Password is incorrect", HttpStatus.UNAUTHORIZED);
+    if (!await this._isPasswordsMatch(loginDto, user)) {
+      throw new BadRequestException("Password is incorrect");
     }
 
     this._identifierService.mark(response, user);
@@ -39,7 +40,7 @@ export class AuthService {
 
   logout(response: Response): void {
     this._identifierService.mark(response, null);
-    const userId = this._identifierService.identify(response.req.headers);
+    const userId = this._identifierService.identify(response.req.headers)?.userId;
     const socket: Socket = this._eventsGateway.getSocket(userId);
     socket.disconnect(true);
   }
@@ -48,7 +49,7 @@ export class AuthService {
     return await this._usersService.createUser(body);
   }
 
-  private _isPasswordsMatch(loginDto: LoginDto, user: User): boolean {
-    return true;
+  private _isPasswordsMatch(loginDto: LoginDto, user: User): Promise<boolean> {
+    return PasswordHasher.compare(loginDto.password, user.password);
   }
 }

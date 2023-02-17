@@ -5,6 +5,7 @@ import { UsersModule } from "../users/users.module";
 import { JwtModule } from "@nestjs/jwt";
 import { IdentifierModule } from "../identifier/identifier.module";
 import { EventsModule } from "../events/events.module";
+import { AuthGuard } from "./auth.guard";
 
 @Module({
   imports: [
@@ -14,7 +15,13 @@ import { EventsModule } from "../events/events.module";
     EventsModule
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService]
+  providers: [
+    AuthService,
+    AuthGuard
+  ],
+  exports: [
+    AuthService,
+    AuthGuard
+  ]
 })
 export class AuthModule {}

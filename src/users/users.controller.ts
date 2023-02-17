@@ -1,10 +1,11 @@
-import { Controller, Get, HttpException, HttpStatus, Req } from "@nestjs/common";
+import { Controller, Get, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { User } from "./user.schema";
 import { AuthService } from "../auth/auth.service";
 import { Request } from "express";
 import { UsersService } from "./users.service";
 import { IdentifierService } from "../identifier/identifier.service";
+import { AuthGuard } from "../auth/auth.guard";
 
 @ApiTags("Users")
 @Controller("users")
@@ -14,17 +15,14 @@ export class UsersController {
               private _usersService: UsersService) {
   }
 
+  @UseGuards(AuthGuard)
   @Get("user-info")
   async getUser(@Req() req: Request): Promise<User> {
-    if (!this._authService.isAuthorized(req)) {
-      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
-    }
-
-    let userId = this._identifierService.identify(req.headers);
+    let userId = this._identifierService.identify(req.headers)?.userId;
     let user: User;
 
     if (!userId) {
-      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException();
     }
     try {
       user = await this._usersService.getUserById(userId);
@@ -35,6 +33,7 @@ export class UsersController {
     return user;
   }
 
+  @UseGuards(AuthGuard)
   @Get('online')
   getOnlineUsers(): User[] {
     return this._usersService.getOnlineUsers();

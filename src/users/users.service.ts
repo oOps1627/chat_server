@@ -3,11 +3,12 @@ import { InjectModel } from "@nestjs/mongoose";
 import { User } from "./user.schema";
 import { HydratedDocument, Model } from "mongoose";
 import { CreateUserDto } from "./create-user.dto";
-import { ConnectionAction, IConnectionEvent, RealtimeEvent } from "../events/types";
+import { IRealtimeEvent, RealtimeAction } from "../events/types";
 import { IdentifierService } from "../identifier/identifier.service";
 import { Socket } from "socket.io";
 import { EventsGateway } from "../events/events.gateway";
-import { concatMap, from, map } from "rxjs";
+import { concatMap, filter, from, map } from "rxjs";
+import { PasswordHasher } from "../auth/password-hasher";
 
 interface IConnectedUser {
   connections: number;
@@ -22,16 +23,17 @@ export class UsersService {
               private _eventsService: EventsGateway,
               private _identifierService: IdentifierService
   ) {
-    this._eventsService.connection$.pipe(
-      map((event) => ({ ...event, userId: this._getUserIdBySocket(event.socket) })),
+    this._eventsService.events$.pipe(
+      filter(event => [RealtimeAction.UserConnected, RealtimeAction.UserDisconnected].includes(event.action)),
       concatMap((event) => {
-        return from(this.getUserById(event.userId)).pipe(map((user) => ({ ...event, user: user })));
+        const userId = this._getUserIdBySocket(event.socket);
+        return from(this.getUserById(userId)).pipe(map((user) => ({ ...event, user: user })));
       })
-    ).subscribe((event) => {
-      if (event.action === ConnectionAction.Disconnect) {
+    ).subscribe((event: IRealtimeEvent & { user: User }) => {
+      if (event.action === RealtimeAction.UserDisconnected) {
         this._handleDisconnect(event.user);
       } else {
-        this._handleConnection(event.user);
+        this._handleConnection(event.user, event.socket);
       }
     });
   }
@@ -41,9 +43,12 @@ export class UsersService {
   }
 
   async createUser(dto: CreateUserDto): Promise<User> {
-    const newUser = await new this.userModel({ ...dto, id: String(Date.now()), roomsIds: [] });
-
-    return newUser.save();
+    return this.userModel.create({
+      id: String(Date.now()),
+      roomsIds: [],
+      username: dto.username,
+      password: await PasswordHasher.hashPassword(dto.password)
+    });
   }
 
   async getUserByUsername(username: string): Promise<User> {
@@ -54,7 +59,7 @@ export class UsersService {
     return await this.userModel.findOne<User>({ id }).exec();
   }
 
-  private _handleConnection(user: User): void {
+  private _handleConnection(user: User, socket: Socket): void {
     if (!user)
       return;
 
@@ -63,8 +68,10 @@ export class UsersService {
       connectedUser.connections += 1;
     } else {
       this._connectedUsers.push({ user, connections: 1 });
-      this._eventsService.emitEventToAll(RealtimeEvent.UserConnected, user);
+      this._eventsService.emitEventToAll(RealtimeAction.UserConnected, user);
     }
+
+    EventsGateway.joinSocketToRooms(socket, user.roomsIds);
   }
 
   private _handleDisconnect(user: User): void {
@@ -75,11 +82,11 @@ export class UsersService {
     connectedUser.connections -= 1;
     if (!connectedUser.connections) {
       this._connectedUsers = this._connectedUsers.filter((userInfo) => userInfo.connections !== 0);
-      this._eventsService.emitEventToAll(RealtimeEvent.UserDisconnected, user);
+      this._eventsService.emitEventToAll(RealtimeAction.UserDisconnected, user);
     }
   }
 
   private _getUserIdBySocket(socket: Socket): string {
-    return this._identifierService.identify(socket.handshake.headers);
+    return this._identifierService.identify(socket.handshake.headers)?.userId;
   }
 }

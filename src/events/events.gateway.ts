@@ -1,6 +1,5 @@
 import { Server, Socket } from "socket.io";
 import {
-  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -9,7 +8,7 @@ import {
 } from "@nestjs/websockets";
 import { Injectable } from "@nestjs/common";
 import { Subject } from "rxjs";
-import { ConnectionAction, IConnectionEvent, RealtimeEvent } from "./types";
+import { IRealtimeEvent, RealtimeAction } from "./types";
 import { IdentifierService } from "../identifier/identifier.service";
 
 @WebSocketGateway({
@@ -22,29 +21,41 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private _server: Server;
 
-  private _connection$ = new Subject<IConnectionEvent>();
+  private _events$ = new Subject<IRealtimeEvent>();
 
-  connection$ = this._connection$.asObservable();
+  events$ = this._events$.asObservable();
+
+  static joinSocketToRooms(socket: Socket, roomsIds: string | string[]): void {
+    socket.join(roomsIds);
+  }
 
   constructor(private _identifierService: IdentifierService) {
   }
 
   handleConnection(socket: Socket): void {
-    this._connection$.next({socket, action: ConnectionAction.Connect});
+    this._events$.next({socket, action: RealtimeAction.UserConnected});
   }
 
   handleDisconnect(socket: Socket): void {
-    this._connection$.next({socket, action: ConnectionAction.Disconnect});
+    this._events$.next({socket, action: RealtimeAction.UserDisconnected});
   }
 
-  emitEventToAll<T>(event: RealtimeEvent, data: T): void {
+  emitEventToAll<T>(event: RealtimeAction, data: T): void {
     this._server.sockets.emit(event, data);
+  }
+
+  emitEventToRooms<T>(event: RealtimeAction, data: T, roomsIds: string | string[]): void {
+    if (!roomsIds || !roomsIds.length) {
+      this.emitEventToAll(event, data);
+    } else {
+      this._server.sockets.to(roomsIds).emit(event, data);
+    }
   }
 
   getSocket(userId: string): Socket {
     let socket: Socket;
     this._server.sockets.sockets.forEach(iteratedSocket => {
-      const socketUserId = this._identifierService.identify(iteratedSocket.handshake.headers);
+      const socketUserId = this._identifierService.identify(iteratedSocket.handshake.headers)?.userId;
       if (socketUserId === userId) {
         socket = iteratedSocket;
       }
@@ -53,8 +64,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return socket;
   }
 
-  // @SubscribeMessage("delete group")
-  // private _createGroup(@MessageBody() data: string): any {
-  //   return data;
-  // }
+  @SubscribeMessage(RealtimeAction.NewMessage)
+  private _handleNewMessageEvent(socket: Socket, data: string): void {
+    this._events$.next({ action: RealtimeAction.NewMessage, data, socket });
+  }
 }
