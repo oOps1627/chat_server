@@ -45,13 +45,13 @@ export class TokenService {
   }
 
   getDecodedAccessToken(headers: IncomingHttpHeaders): ITokenInfo | undefined {
-    const token: string = this._getToken(headers, ACCESS_TOKEN);
+    const token: string = this._getTokenFromCookies(headers, ACCESS_TOKEN);
 
     return this._decodeToken(token, ACCESS_TOKEN);
   }
 
   getDecodedRefreshToken(headers: IncomingHttpHeaders): ITokenInfo | undefined {
-    let token: string = this._getToken(headers, REFRESH_TOKEN);
+    let token: string = this._getTokenFromCookies(headers, REFRESH_TOKEN);
 
     return this._decodeToken(token, REFRESH_TOKEN);
   }
@@ -65,7 +65,7 @@ export class TokenService {
 
   async isRefreshTokenValid(response: Response): Promise<boolean> {
     const userId = this.getDecodedAccessToken(response.req.headers)?.userId;
-    const refreshToken = this._getRefreshTokenFromCookies(response.req.headers);
+    const refreshToken = this._getTokenFromCookies(response.req.headers, REFRESH_TOKEN);
     
     const pair: Token = await this._tokenModel.findOne({userId}).exec();
 
@@ -84,7 +84,7 @@ export class TokenService {
     await this._deleteRefreshTokenFromDB(res);
   }
 
-  private _getToken(headers: IncomingHttpHeaders, options: ITokenOptions): string | undefined {
+  private _getTokenFromCookies(headers: IncomingHttpHeaders, options: ITokenOptions): string | undefined {
     let cookies;
     try {
       cookies = parse(headers.cookie);
@@ -94,18 +94,6 @@ export class TokenService {
     }
 
     return cookies[options.KEY];
-  }
-
-  private _getRefreshTokenFromCookies(headers: IncomingHttpHeaders): string {
-    let cookies;
-    try {
-      cookies = parse(headers.cookie);
-    } catch (error) {
-      console.error(error);
-      return;
-    }
-
-    return cookies[REFRESH_TOKEN.KEY];
   }
 
   private _setTokenToCookies(res: Response, token: string, tokenOptions: ITokenOptions): void {
