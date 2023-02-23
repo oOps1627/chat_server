@@ -4,21 +4,21 @@ import { User } from "./user.schema";
 import { AuthService } from "../auth/auth.service";
 import { Request } from "express";
 import { UsersService } from "./users.service";
-import { IdentifierService } from "../identifier/identifier.service";
+import { TokenService } from "../token/token.service";
 import { AuthGuard } from "../auth/auth.guard";
 
 @ApiTags("Users")
 @Controller("users")
 export class UsersController {
   constructor(private _authService: AuthService,
-              private _identifierService: IdentifierService,
+              private _tokenService: TokenService,
               private _usersService: UsersService) {
   }
 
   @UseGuards(AuthGuard)
   @Get("user-info")
   async getUser(@Req() req: Request): Promise<User> {
-    let userId = this._identifierService.identify(req.headers)?.userId;
+    let userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
     let user: User;
 
     if (!userId) {

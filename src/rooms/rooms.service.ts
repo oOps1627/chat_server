@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Room } from "./room.schema";
 import { HydratedDocument, Model } from "mongoose";
 import { Request } from "express";
-import { IdentifierService } from "../identifier/identifier.service";
+import { TokenService } from "../token/token.service";
 import { CreateRoomDto } from "./create-room.dto";
 import { EventsGateway } from "../events/events.gateway";
 import { RealtimeAction } from "../events/types";
@@ -12,7 +12,7 @@ import { RealtimeAction } from "../events/types";
 export class RoomsService {
   constructor(@InjectModel(Room.name) private _roomModel: Model<HydratedDocument<Room>>,
               private _eventsGateway: EventsGateway,
-              private _identifierService: IdentifierService) {
+              private _tokenService: TokenService) {
   }
 
   async getAllRooms(): Promise<Room[]> {
@@ -20,13 +20,13 @@ export class RoomsService {
   }
 
   async getUserRooms(req: Request): Promise<Room[]> {
-    const userId = this._identifierService.identify(req.headers)?.userId;
+    const userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
 
     return await this._roomModel.where({ authorId: userId }).exec();
   }
 
   async createRoom(req: Request, createRoomDto: CreateRoomDto): Promise<Room> {
-    const userId = this._identifierService.identify(req.headers)?.userId;
+    const userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
 
     return await new this._roomModel({
       ...createRoomDto,
@@ -41,7 +41,7 @@ export class RoomsService {
   }
 
   async deleteRoom(req: Request, roomId: string): Promise<any> {
-    const userId = this._identifierService.identify(req.headers)?.userId;
+    const userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
 
     return new Promise<void>((resolve, reject) => {
       return this._roomModel.findOne({ id: roomId }, (err, room: HydratedDocument<Room>) => {
@@ -60,7 +60,7 @@ export class RoomsService {
   }
 
   joinUserToRoom(req: Request, roomId: string): Promise<void> {
-    const userId = this._identifierService.identify(req.headers)?.userId;
+    const userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
 
     return new Promise<void>((resolve, reject) => {
       this._roomModel.findOne({ id: roomId }, (err, room: HydratedDocument<Room>) => {

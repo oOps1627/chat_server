@@ -1,9 +1,9 @@
 import { Module } from "@nestjs/common";
 import { EventsGateway } from "./events.gateway";
-import { IdentifierModule } from "../identifier/identifier.module";
+import { TokenModule } from "../token/token.module";
 
 @Module({
-  imports: [IdentifierModule],
+  imports: [TokenModule],
   providers: [EventsGateway],
   exports: [EventsGateway],
 })

@@ -3,7 +3,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { UsersModule } from "../users/users.module";
 import { JwtModule } from "@nestjs/jwt";
-import { IdentifierModule } from "../identifier/identifier.module";
+import { TokenModule } from "../token/token.module";
 import { EventsModule } from "../events/events.module";
 import { AuthGuard } from "./auth.guard";
 
@@ -11,7 +11,7 @@ import { AuthGuard } from "./auth.guard";
   imports: [
     forwardRef(() => UsersModule),
     JwtModule,
-    IdentifierModule,
+    TokenModule,
     EventsModule
   ],
   controllers: [AuthController],

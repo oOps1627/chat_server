@@ -9,7 +9,7 @@ import {
 import { Injectable } from "@nestjs/common";
 import { Subject } from "rxjs";
 import { IRealtimeEvent, RealtimeAction } from "./types";
-import { IdentifierService } from "../identifier/identifier.service";
+import { TokenService } from "../token/token.service";
 
 @WebSocketGateway({
   cors: {
@@ -29,7 +29,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     socket.join(roomsIds);
   }
 
-  constructor(private _identifierService: IdentifierService) {
+  constructor(private _tokenService: TokenService) {
   }
 
   handleConnection(socket: Socket): void {
@@ -55,7 +55,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   getSocket(userId: string): Socket {
     let socket: Socket;
     this._server.sockets.sockets.forEach(iteratedSocket => {
-      const socketUserId = this._identifierService.identify(iteratedSocket.handshake.headers)?.userId;
+      const socketUserId = this._tokenService.getDecodedAccessToken(iteratedSocket.handshake.headers)?.userId;
       if (socketUserId === userId) {
         socket = iteratedSocket;
       }

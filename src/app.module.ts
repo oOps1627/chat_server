@@ -5,7 +5,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { UsersModule } from "./users/users.module";
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from "./events/events.module";
-import { IdentifierModule } from './identifier/identifier.module';
+import { TokenModule } from './token/token.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { MessagesModule } from './messages/messages.module';
 import { DbConfiguration } from "./db/db-configuration";
@@ -19,7 +19,7 @@ import { DbConfiguration } from "./db/db-configuration";
     UsersModule,
     AuthModule,
     EventsModule,
-    IdentifierModule,
+    TokenModule,
     RoomsModule,
     MessagesModule
   ],

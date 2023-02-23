@@ -4,11 +4,11 @@ import { User } from "./user.schema";
 import { HydratedDocument, Model } from "mongoose";
 import { CreateUserDto } from "./create-user.dto";
 import { IRealtimeEvent, RealtimeAction } from "../events/types";
-import { IdentifierService } from "../identifier/identifier.service";
+import { TokenService } from "../token/token.service";
 import { Socket } from "socket.io";
 import { EventsGateway } from "../events/events.gateway";
 import { concatMap, filter, from, map } from "rxjs";
-import { PasswordHasher } from "../auth/password-hasher";
+import { Hasher } from "../helpers/hasher";
 
 interface IConnectedUser {
   connections: number;
@@ -21,7 +21,7 @@ export class UsersService {
 
   constructor(@InjectModel(User.name) private userModel: Model<HydratedDocument<User>>,
               private _eventsService: EventsGateway,
-              private _identifierService: IdentifierService
+              private _tokenService: TokenService
   ) {
     this._eventsService.events$.pipe(
       filter(event => [RealtimeAction.UserConnected, RealtimeAction.UserDisconnected].includes(event.action)),
@@ -45,9 +45,8 @@ export class UsersService {
   async createUser(dto: CreateUserDto): Promise<User> {
     return this.userModel.create({
       id: String(Date.now()),
-      roomsIds: [],
       username: dto.username,
-      password: await PasswordHasher.hashPassword(dto.password)
+      password: await Hasher.hash(dto.password)
     });
   }
 
@@ -87,6 +86,6 @@ export class UsersService {
   }
 
   private _getUserIdBySocket(socket: Socket): string {
-    return this._identifierService.identify(socket.handshake.headers)?.userId;
+    return this._tokenService.getDecodedAccessToken(socket.handshake.headers)?.userId;
   }
 }

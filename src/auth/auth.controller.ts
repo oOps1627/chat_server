@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, HttpStatus, Post, Res } from "@nestjs/common";
+import { Body, Controller, Delete, HttpStatus, Post, Res } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { User } from "../users/user.schema";
 import { LoginDto } from "./dto/login.dto";
@@ -15,16 +15,20 @@ export class AuthController {
     @ApiOperation({summary: "Login user"})
     @ApiResponse({status: HttpStatus.CREATED, type: User})
     @Post("login")
-    @HttpCode(HttpStatus.CREATED)
     async login(@Body() body: LoginDto, @Res() res: Response): Promise<void> {
         const user: User = await this._authService.authorize(res, body);
         res.status(HttpStatus.CREATED).send(user);
     }
 
     @Delete("logout")
-    logout(@Res() res: Response) {
-        this._authService.logout(res);
+    async logout(@Res() res: Response) {
+        await this._authService.logout(res);
         res.sendStatus(HttpStatus.CREATED);
+    }
+
+    @Post("refresh")
+    async refresh(@Res() res: Response): Promise<void> {
+        await this._authService.refresh(res);
     }
 
     @Post("register")

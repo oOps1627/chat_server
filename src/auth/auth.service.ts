@@ -1,25 +1,25 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Request, Response } from "express";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { UsersService } from "../users/users.service";
 import { User } from "../users/user.schema";
-import { IdentifierService } from "../identifier/identifier.service";
+import { ITokenInfo, ITokens, TokenService } from "../token/token.service";
 import { EventsGateway } from "../events/events.gateway";
 import { Socket } from "socket.io";
-import { PasswordHasher } from "./password-hasher";
+import { Hasher } from "../helpers/hasher";
 
 @Injectable()
 export class AuthService {
   constructor(
-    private _identifierService: IdentifierService,
+    private _tokenService: TokenService,
     private _usersService: UsersService,
     private _eventsGateway: EventsGateway
   ) {
   }
 
   isAuthorized(req: Request): boolean {
-    return !!this._identifierService.identify(req.headers);
+    return !!this._tokenService.getDecodedAccessToken(req.headers);
   }
 
   async authorize(response: Response, loginDto: LoginDto): Promise<User> {
@@ -33,14 +33,15 @@ export class AuthService {
       throw new BadRequestException("Password is incorrect");
     }
 
-    this._identifierService.mark(response, user);
+    const tokens = this._tokenService.generateTokens({ userId: user.id, username: user.username });
+    await this._tokenService.saveTokens(response, tokens);
 
     return user;
   }
 
-  logout(response: Response): void {
-    this._identifierService.mark(response, null);
-    const userId = this._identifierService.identify(response.req.headers)?.userId;
+  async logout(response: Response): Promise<void> {
+    const userId = this._tokenService.getDecodedAccessToken(response.req.headers)?.userId;
+    await this._tokenService.deleteTokens(response);
     const socket: Socket = this._eventsGateway.getSocket(userId);
     socket.disconnect(true);
   }
@@ -49,7 +50,22 @@ export class AuthService {
     return await this._usersService.createUser(body);
   }
 
+  async refresh(response: Response): Promise<void> {
+    const decodedToken: ITokenInfo = this._tokenService.getDecodedRefreshToken(response.req.headers);
+    const isRefreshTokenValid: boolean = await this._tokenService.isRefreshTokenValid(response);
+    const canRefresh: boolean = decodedToken && isRefreshTokenValid;
+
+    if (canRefresh) {
+      const user: User = await this._usersService.getUserById(decodedToken.userId);
+      const tokens: ITokens = this._tokenService.generateTokens({ userId: user.id, username: user.username });
+      await this._tokenService.saveTokens(response, tokens);
+      response.send(200);
+    } else {
+      throw new UnauthorizedException();
+    }
+  }
+
   private _isPasswordsMatch(loginDto: LoginDto, user: User): Promise<boolean> {
-    return PasswordHasher.compare(loginDto.password, user.password);
+    return Hasher.compare(loginDto.password, user.password);
   }
 }

@@ -7,12 +7,12 @@ import { filter } from "rxjs";
 import { RealtimeAction } from "../events/types";
 import { ReceivedMessageDTO } from "./recieved-message.dto";
 import { IncomingHttpHeaders } from "http";
-import { IdentifierService } from "../identifier/identifier.service";
+import { TokenService } from "../token/token.service";
 
 @Injectable()
 export class MessagesService {
   constructor(@InjectModel(Message.name) private _messageModel: Model<HydratedDocument<Message>>,
-              private _identifierService: IdentifierService,
+              private _tokenService: TokenService,
               private _eventsGateway: EventsGateway) {
     this._eventsGateway.events$.pipe(
       filter((event) => event.action === RealtimeAction.NewMessage),
@@ -35,7 +35,7 @@ export class MessagesService {
   }
 
   private _createMessage(receivedMessage: ReceivedMessageDTO, headers: IncomingHttpHeaders): Message {
-    const user = this._identifierService.identify(headers);
+    const user = this._tokenService.getDecodedAccessToken(headers);
 
     return {
       ...receivedMessage,

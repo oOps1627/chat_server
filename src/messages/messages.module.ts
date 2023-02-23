@@ -5,12 +5,12 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { MessageSchema } from "./message.schema";
 import { EventsModule } from "../events/events.module";
 import { AuthModule } from "../auth/auth.module";
-import { IdentifierModule } from "../identifier/identifier.module";
+import { TokenModule } from "../token/token.module";
 
 @Module({
   imports: [
     AuthModule,
-    IdentifierModule,
+    TokenModule,
     MongooseModule.forFeature([{name: 'Message', schema: MessageSchema}]),
     EventsModule
   ],

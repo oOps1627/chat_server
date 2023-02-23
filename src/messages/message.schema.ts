@@ -3,28 +3,29 @@ import { ApiProperty } from "@nestjs/swagger";
 
 @Schema()
 export class Message {
-  @ApiProperty({type: 'string'})
-  @Prop({unique: true, required: true})
+  @ApiProperty({ type: "string" })
+  @Prop({ unique: true, required: true })
   id: string;
 
-  @ApiProperty({type: 'string'})
+  @ApiProperty({ type: "string" })
   @Prop()
   text: string;
 
-  @ApiProperty({type: 'string'})
-  @Prop({required: true})
+  @ApiProperty({ type: "string" })
+  @Prop({ required: true })
+    // @Prop({required: true, type: MongooseSchema.Types.ObjectId, ref: 'User'})
   authorId: string;
 
-  @ApiProperty({type: 'string'})
-  @Prop({required: true})
+  @ApiProperty({ type: "string" })
+  @Prop({ required: true })
   authorUsername: string;
 
-  @ApiProperty({type: 'string'})
-  @Prop({required: false})
+  @ApiProperty({ type: "string" })
+  @Prop({ required: false })
   roomId: string;
 
-  @ApiProperty({type: 'number'})
-  @Prop({required: true})
+  @ApiProperty({ type: "number" })
+  @Prop({ required: true })
   date: number;
 }
 

@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { ApiProperty } from "@nestjs/swagger";
+import { Exclude } from "class-transformer";
 
 @Schema()
 export class User {
@@ -11,12 +12,16 @@ export class User {
   @Prop({unique: true, required: true})
   username: string;
 
+  @Exclude()
   @ApiProperty({type: 'string'})
   @Prop({required: true})
   password: string;
 
+  @Exclude()
+  public currentHashedRefreshToken?: string;
+
   @ApiProperty({type: 'number', isArray: true})
-  @Prop()
+  @Prop({default: []})
   roomsIds: string[];
 }
 
