@@ -19,7 +19,7 @@ export class RoomsController {
 
   @UseGuards(AuthGuard)
   @Delete(':roomId')
-  async deleteRoom(@Req() request: Request, @Param('roomId') roomId: string): Promise<void> {
+  async deleteRoom(@Req() request: Request, @Param('roomId') roomId: string): Promise<Room> {
     return await this._roomsService.deleteRoom(request, roomId);
   }
 
@@ -37,7 +37,7 @@ export class RoomsController {
 
   @UseGuards(AuthGuard)
   @Put('join/:roomId')
-  async joinRoom(@Param('roomId') roomId: string, @Req() request: Request): Promise<void> {
-    await this._roomsService.joinUserToRoom(request, roomId);
+  async joinRoom(@Param('roomId') roomId: string, @Req() request: Request): Promise<Room> {
+    return await this._roomsService.joinUserToRoom(request, roomId);
   }
 }

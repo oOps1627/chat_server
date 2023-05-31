@@ -26,7 +26,7 @@ interface ITokenOptions {
 
 const ACCESS_TOKEN: ITokenOptions = {
   KEY: "access_token",
-  EXPIRATION: "10s",
+  EXPIRATION: "30m",
   SECRET: "russia sucks",
 }
 
@@ -51,7 +51,7 @@ export class TokenService {
   }
 
   getDecodedRefreshToken(headers: IncomingHttpHeaders): ITokenInfo | undefined {
-    let token: string = this._getTokenFromCookies(headers, REFRESH_TOKEN);
+    const token: string = this._getTokenFromCookies(headers, REFRESH_TOKEN);
 
     return this._decodeToken(token, REFRESH_TOKEN);
   }
@@ -63,9 +63,9 @@ export class TokenService {
     };
   }
 
-  async isRefreshTokenValid(response: Response): Promise<boolean> {
-    const userId = this.getDecodedAccessToken(response.req.headers)?.userId;
-    const refreshToken = this._getTokenFromCookies(response.req.headers, REFRESH_TOKEN);
+  async isRefreshTokenValid(headers: IncomingHttpHeaders): Promise<boolean> {
+    const userId = this.getDecodedAccessToken(headers)?.userId;
+    const refreshToken = this._getTokenFromCookies(headers, REFRESH_TOKEN);
     
     const pair: Token = await this._tokenModel.findOne({userId}).exec();
 

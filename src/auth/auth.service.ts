@@ -52,14 +52,14 @@ export class AuthService {
 
   async refresh(response: Response): Promise<void> {
     const decodedToken: ITokenInfo = this._tokenService.getDecodedRefreshToken(response.req.headers);
-    const isRefreshTokenValid: boolean = await this._tokenService.isRefreshTokenValid(response);
+    const isRefreshTokenValid: boolean = await this._tokenService.isRefreshTokenValid(response.req.headers);
     const canRefresh: boolean = decodedToken && isRefreshTokenValid;
 
     if (canRefresh) {
       const user: User = await this._usersService.getUserById(decodedToken.userId);
       const tokens: ITokens = this._tokenService.generateTokens({ userId: user.id, username: user.username });
       await this._tokenService.saveTokens(response, tokens);
-      response.send(200);
+      response.sendStatus(200);
     } else {
       throw new UnauthorizedException();
     }

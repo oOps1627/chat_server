@@ -8,6 +8,9 @@ export class Hasher {
   }
 
   static compare(message: string, hashedMessage: string): Promise<boolean> {
-    return bcrypt.compare(message, hashedMessage);
+    return bcrypt.compare(message, hashedMessage).catch(error => {
+        console.error('Compare hash error: ', error);
+        return false;
+    });
   }
 }

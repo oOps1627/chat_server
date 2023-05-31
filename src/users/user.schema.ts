@@ -2,7 +2,9 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude } from "class-transformer";
 
-@Schema()
+@Schema({
+  versionKey: false,
+})
 export class User {
   @ApiProperty({type: 'string'})
   @Prop({unique: true, required: true})

@@ -54,6 +54,7 @@ export class UsersService {
     return await this.userModel.findOne<User>({ username }).exec();
   }
 
+  // TODO: remove password field from DTO
   async getUserById(id: string): Promise<User> {
     return await this.userModel.findOne<User>({ id }).exec();
   }
