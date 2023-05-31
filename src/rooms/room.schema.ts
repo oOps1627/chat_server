@@ -1,8 +1,14 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { transformID } from "../helpers/json-transformer";
 
-@Schema()
+@Schema({
+  versionKey: false,
+  toJSON: {
+    virtuals: true,
+    transform: transformID
+  }
+})
 export class Room {
-  @Prop({unique: true, required: true})
   id: string;
 
   @Prop()

@@ -44,7 +44,6 @@ export class UsersService {
 
   async createUser(dto: CreateUserDto): Promise<User> {
     return this.userModel.create({
-      id: String(Date.now()),
       username: dto.username,
       password: await Hasher.hash(dto.password)
     });
@@ -56,7 +55,7 @@ export class UsersService {
 
   // TODO: remove password field from DTO
   async getUserById(id: string): Promise<User> {
-    return await this.userModel.findOne<User>({ id }).exec();
+    return await this.userModel.findById<User>(id).exec();
   }
 
   private _handleConnection(user: User, socket: Socket): void {

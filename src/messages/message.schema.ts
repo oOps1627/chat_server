@@ -1,10 +1,15 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { ApiProperty } from "@nestjs/swagger";
+import { transformID } from "../helpers/json-transformer";
 
-@Schema()
+@Schema({
+  versionKey: false,
+  toJSON: {
+    virtuals: true,
+    transform: transformID
+  }
+})
 export class Message {
-  @ApiProperty({ type: "string" })
-  @Prop({ unique: true, required: true })
   id: string;
 
   @ApiProperty({ type: "string" })
