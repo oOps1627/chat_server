@@ -14,7 +14,7 @@ export class Room {
   @Prop()
   membersIds: string[];
 
-  @Prop()
+  @Prop({unique: true})
   name: string;
 
   @Prop()
