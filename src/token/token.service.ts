@@ -26,7 +26,7 @@ interface ITokenOptions {
 
 const ACCESS_TOKEN: ITokenOptions = {
   KEY: "access_token",
-  EXPIRATION: "10s",
+  EXPIRATION: "30m",
   SECRET: "russia sucks",
 }
 

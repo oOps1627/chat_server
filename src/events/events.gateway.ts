@@ -25,8 +25,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   events$ = this._events$.asObservable();
 
-  static joinSocketToRooms(socket: Socket, roomsIds: string | string[]): void {
+  static joinSocketToRooms(socket: Socket, roomsIds: string | string[]): Promise<void> | void {
     socket.join(roomsIds);
+  }
+
+  static removeSocketFromRoom(socket: Socket, room: string): Promise<void> | void {
+    socket.leave(room);
   }
 
   constructor(private _tokenService: TokenService) {

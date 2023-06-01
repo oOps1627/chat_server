@@ -7,11 +7,16 @@ import { TokenService } from "../token/token.service";
 import { CreateRoomDto } from "./create-room.dto";
 import { EventsGateway } from "../events/events.gateway";
 import { RealtimeAction } from "../events/types";
+import { MessagesService } from "../messages/messages.service";
+import { UsersService } from "../users/users.service";
+import { Socket } from "socket.io";
 
 @Injectable()
 export class RoomsService {
     constructor(@InjectModel(Room.name) private _roomModel: Model<HydratedDocument<Room>>,
                 private _eventsGateway: EventsGateway,
+                private _usersService: UsersService,
+                private _messagesService: MessagesService,
                 private _tokenService: TokenService) {
     }
 
@@ -25,18 +30,17 @@ export class RoomsService {
         return await this._roomModel.where({authorId: userId}).exec();
     }
 
-    createRoom(req: Request, createRoomDto: CreateRoomDto): Promise<Room> {
+    async createRoom(req: Request, createRoomDto: CreateRoomDto): Promise<Room> {
         const userId = this._tokenService.getDecodedAccessToken(req.headers)?.userId;
 
-        return this._roomModel.create({
+        const room = await this._roomModel.create({
             ...createRoomDto,
             authorId: userId,
-            membersIds: [userId]
-        } as Room).then((room: HydratedDocument<Room>) => {
-            this._eventsGateway.emitEventToAll(RealtimeAction.RoomCreated, room);
+        } as Room);
+        this._eventsGateway.emitEventToAll(RealtimeAction.RoomCreated, room);
+        await this.joinUserToRoom(req, room.id);
 
-            return room;
-        });
+        return room;
     }
 
     async deleteRoom(req: Request, roomId: string): Promise<Room> {
@@ -48,7 +52,11 @@ export class RoomsService {
             throw new ForbiddenException("Only creator can delete the room");
         }
 
-        room.delete();
+        await room.delete();
+        await this._messagesService.deleteMessagesByRoomId(roomId);
+        await this._usersService.removeUserFromRoom(userId, roomId);
+        const socket: Socket = this._eventsGateway.getSocket(userId);
+        EventsGateway.removeSocketFromRoom(socket, roomId);
         this._eventsGateway.emitEventToAll(RealtimeAction.RoomDeleted, room.id);
 
         return room;
@@ -64,7 +72,10 @@ export class RoomsService {
         }
 
         room.membersIds.push(userId);
-        room.save();
+        await room.save();
+        await this._usersService.joinUserToRoom(userId, roomId);
+        const socket: Socket = this._eventsGateway.getSocket(userId);
+        await EventsGateway.joinSocketToRooms(socket, roomId);
         this._eventsGateway.emitEventToAll(RealtimeAction.UserJoinedRoom, {room: room, userId: userId});
 
         return room;

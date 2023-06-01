@@ -32,7 +32,11 @@ export class MessagesService {
     }).exec();
   }
 
-  private _createMessage(receivedMessage: ReceivedMessageDTO, headers: IncomingHttpHeaders): Promise<Message> {
+  deleteMessagesByRoomId(roomId: string): Promise<any> {
+    return this._messageModel.deleteMany(({roomId})).exec();
+  }
+
+  private async _createMessage(receivedMessage: ReceivedMessageDTO, headers: IncomingHttpHeaders): Promise<Message> {
     const user = this._tokenService.getDecodedAccessToken(headers);
 
     if (!user) {
@@ -41,7 +45,7 @@ export class MessagesService {
       return;
     }
 
-    return this._messageModel.create({
+    return await this._messageModel.create({
       ...receivedMessage,
       authorId: user.userId,
       authorUsername: user.username,

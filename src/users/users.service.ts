@@ -53,6 +53,18 @@ export class UsersService {
     return await this.userModel.findOne<User>({ username }).exec();
   }
 
+  async joinUserToRoom(userId: string, roomId: string): Promise<any> {
+    const user = await this.userModel.findById(userId).exec();
+    user.roomsIds = [...user.roomsIds, roomId];
+    await user.save();
+  }
+
+  async removeUserFromRoom(userId: string, roomId: string): Promise<void> {
+    const user = await this.userModel.findById(userId).exec();
+    user.roomsIds = (user.roomsIds ?? []).filter((room) => room !== roomId);
+    await user.save();
+  }
+
   // TODO: remove password field from DTO
   async getUserById(id: string): Promise<User> {
     return await this.userModel.findById<User>(id).exec();
